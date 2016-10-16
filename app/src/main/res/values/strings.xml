@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">TopAlignedTextView</string>
+    <string name="text_demo_a">abcdefghijklmnopqrstuvwxyz</string>
+    <string name="text_demo_A">ABCDEFGHIJKLMNOPQRSTUVWXYZ</string>
+</resources>
