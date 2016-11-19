@@ -3,10 +3,13 @@ package com.github.captain_miao.view;
 import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Build;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.widget.TextView;
 
 /**
@@ -18,10 +21,11 @@ import android.widget.TextView;
 public class TopAlignedTextView extends TextView {
 
 
-    private final Paint mPaint = new Paint();
+    private final TextPaint mPaint = new TextPaint();
 
     private final Rect mBounds = new Rect();
 
+    DisplayMetrics dm;
     public TopAlignedTextView(Context context) {
         this(context, null);
     }
@@ -42,6 +46,7 @@ public class TopAlignedTextView extends TextView {
     }
 
     private void init(Context context, AttributeSet attrs) {
+        dm = getResources().getDisplayMetrics();
     }
 
     @Override
@@ -53,15 +58,30 @@ public class TopAlignedTextView extends TextView {
         mBounds.offset(-mBounds.left + getPaddingLeft(), -mBounds.top + getPaddingTop());
         mPaint.setAntiAlias(true);
         mPaint.setColor(getCurrentTextColor());
-        canvas.drawText(text, -left + getPaddingLeft(), mBounds.bottom - bottom, mPaint);
+
+
+        StaticLayout mTextLayout = new StaticLayout(text, mPaint, canvas.getWidth(), Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+
+        canvas.save();
+        // calculate x and y position where your text will be placed
+
+        mTextLayout.draw(canvas);
+        canvas.restore();
+
+        //canvas.drawText(text, -left + getPaddingLeft(), mBounds.bottom - bottom, mPaint);
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         calculateTextParams();
-        setMeasuredDimension(mBounds.width() + 1 + getPaddingLeft() + getPaddingRight(),
-                -mBounds.top + 1 + mBounds.bottom+ getPaddingTop() + getPaddingBottom());
+        // lines
+        int width = mBounds.width() + 1 + getPaddingLeft() + getPaddingRight();
+        float lines = (width + 1f) / dm.widthPixels;
+        // don't support getPaddingTop() and getPaddingBottom()
+        int height = -mBounds.top + 1 + mBounds.bottom;
+        int sumHeight = height + (int)(mBounds.height() * Math.ceil(lines)) + 1;
+        setMeasuredDimension(Math.min(getMeasuredWidth(), Math.min(width, dm.widthPixels)), sumHeight);
     }
 
     private String calculateTextParams() {

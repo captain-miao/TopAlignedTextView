@@ -3,7 +3,7 @@ Android library to top aligned text in a textView, suggest use in LinearLayout.
 
 It's from [How to remove the top and bottom space on textview of Android-wizard@stackoverflow.com](http://stackoverflow.com/a/32836547/703225)
 
-## don't support multi-lines
+## don't support PaddingTop and PaddingBottom
 
 ## screenshot
 ![screenshot_top_align](https://raw.githubusercontent.com/captain-miao/me.github.com/master/jpg/screenshot_top_align.jpg  "screenshot_top_align")
