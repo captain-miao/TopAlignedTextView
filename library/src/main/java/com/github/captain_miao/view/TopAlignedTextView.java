@@ -88,7 +88,9 @@ public class TopAlignedTextView extends TextView {
         mPaint.setColor(getCurrentTextColor());
 
 
-        StaticLayout mTextLayout = new StaticLayout(text, mPaint, canvas.getWidth(), Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+        StaticLayout mTextLayout = new StaticLayout(text, mPaint,
+                canvas.getWidth() - getPaddingLeft() - getPaddingRight(),
+                Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
 
 
 
