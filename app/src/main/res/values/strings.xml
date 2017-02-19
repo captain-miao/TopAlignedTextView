@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">TopAlignedTextView</string>
-    <string name="text_demo_a">abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz</string>
-    <string name="text_demo_short">ABCDEFGHIJK</string>
-    <string name="text_demo_A">ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ</string>
+    <string name="text_demo_a">abcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz1234567890abcdefghijklmnopqrstuvwxyz01234567891011121314151617181920_END</string>
+    <string name="text_demo_short">ABCDEFGHIJK_END</string>
+    <string name="text_demo_A">ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789101112131415161718192001234567891011121314151617181920012345678910111213141516171819200123456789101112131415161718192001234567891011121314151617181920_END</string>
 </resources>

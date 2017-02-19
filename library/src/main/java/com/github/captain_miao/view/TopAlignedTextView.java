@@ -8,17 +8,14 @@ import android.graphics.Canvas;
 import android.graphics.Rect;
 import android.os.Build;
 import android.text.Layout;
-import android.text.Spannable;
-import android.text.SpannableStringBuilder;
 import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.view.View;
 import android.widget.TextView;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -27,7 +24,7 @@ import java.util.regex.Pattern;
  * @author YanLu
  * @since 16/10/17
  */
-public class TopAlignedTextView extends TextView {
+public class TopAlignedTextView extends TextView implements View.OnClickListener {
 
 
     private final TextPaint mPaint = new TextPaint();
@@ -40,6 +37,7 @@ public class TopAlignedTextView extends TextView {
     private Pattern endPunctuationPattern;
 
     DisplayMetrics dm;
+    private boolean mIsExpand = false;
     public TopAlignedTextView(Context context) {
         this(context, null);
     }
@@ -64,13 +62,17 @@ public class TopAlignedTextView extends TextView {
         init(context, attrs);
         super.setEllipsize(null);
         TypedArray a = context.obtainStyledAttributes(attrs, new int[] { android.R.attr.maxLines });
-        setMaxLines(a.getInt(0, Integer.MAX_VALUE));
+        setMaxLines(a.getInt(0, -1));
         a.recycle();
         setEndPunctuationPattern(DEFAULT_END_PUNCTUATION);
+        if(maxLines <= 0){
+            throw new IllegalStateException("maxLines must >= 1");
+        }
     }
 
     private void init(Context context, AttributeSet attrs) {
         dm = getResources().getDisplayMetrics();
+        setOnClickListener(this);
     }
 
     public void setEndPunctuationPattern(Pattern pattern) {
@@ -80,75 +82,75 @@ public class TopAlignedTextView extends TextView {
     @Override
     protected void onDraw(Canvas canvas) {
         final String text = calculateTextParams();
+        Layout layout = getLayout();
+        if(layout != null) {
+            mBounds.offset(-mBounds.left + getPaddingLeft(), -mBounds.top + getPaddingTop());
+            mPaint.setAntiAlias(true);
+            mPaint.setColor(getCurrentTextColor());
 
-        final int left = mBounds.left;
-        final int bottom = mBounds.bottom;
-        mBounds.offset(-mBounds.left + getPaddingLeft(), -mBounds.top + getPaddingTop());
-        mPaint.setAntiAlias(true);
-        mPaint.setColor(getCurrentTextColor());
-
-
-        StaticLayout mTextLayout = new StaticLayout(text, mPaint,
-                canvas.getWidth() - getPaddingLeft() - getPaddingRight(),
-                Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+            StaticLayout mTextLayout = new StaticLayout(text, mPaint,
+                    layout.getWidth() - getPaddingLeft()- getPaddingRight(),
+                    Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
 
 
-
-        int linesCount = getLinesCount();
-        CharSequence workingText = text;
-        if (mTextLayout.getLineCount() > linesCount) {
-            // We have more lines of text than we are allowed to display.
-            workingText = text.subSequence(0, mTextLayout.getLineEnd(linesCount - 1));
-            while (createWorkingLayout(workingText + ELLIPSIS).getLineCount() > linesCount) {
-                int lastSpace = workingText.toString().lastIndexOf(' ');
-                if (lastSpace == -1) {
-                    break;
+            int linesCount = mTextLayout.getLineCount();
+            CharSequence workingText = text;
+            workingText = endPunctuationPattern.matcher(workingText).replaceFirst("");
+            if (!mIsExpand && linesCount > maxLines) {
+                int index = text.length() - ELLIPSIS.length();
+                workingText = text.subSequence(0, index);
+                while (createWorkingLayout(layout.getWidth() - getPaddingLeft()- getPaddingRight(), workingText + ELLIPSIS).getLineCount() > maxLines) {
+                    index -= ELLIPSIS.length();
+                    workingText = workingText.subSequence(0, index);
                 }
-                workingText = workingText.subSequence(0, lastSpace);
-            }
-            // We should do this in the loop above, but it's cheaper this way.
-            if (workingText instanceof Spannable) {
-                SpannableStringBuilder builder = new SpannableStringBuilder(workingText);
-                Matcher matcher = endPunctuationPattern.matcher(workingText);
-                if (matcher.find()) {
-                    builder.replace(matcher.start(), workingText.length(), ELLIPSIS);
-                }
-                workingText = builder;
-            } else {
-                workingText = endPunctuationPattern.matcher(workingText).replaceFirst("");
+
                 workingText = workingText + ELLIPSIS;
+
             }
+
+            mTextLayout = new StaticLayout(workingText, mPaint, canvas.getWidth(), Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+            canvas.save();
+            mTextLayout.draw(canvas);
+            canvas.restore();
         }
-
-        mTextLayout = new StaticLayout(workingText, mPaint, canvas.getWidth(), Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
-
-        canvas.save();
-        // calculate x and y position where your text will be placed
-
-        mTextLayout.draw(canvas);
-        canvas.restore();
-
-        //canvas.drawText(text, -left + getPaddingLeft(), mBounds.bottom - bottom, mPaint);
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        calculateTextParams();
-        // lines
-        int width = mBounds.width() + 1 + getPaddingLeft() + getPaddingRight();
-        float lines = (width + 1f) / dm.widthPixels;
-        // don't support getPaddingTop() and getPaddingBottom()
-        int height = -mBounds.top + 1 + mBounds.bottom;
-        int sumHeight = height + (int)(mBounds.height() * Math.ceil(lines)) + 1;
-        setMeasuredDimension(Math.min(getMeasuredWidth(), Math.min(width, dm.widthPixels)), sumHeight);
+        Layout layout = getLayout();
+        if(layout != null) {
+            calculateTextParams();
+            // lines
+            int width = mBounds.width();
+            float lines = (width + 1f) / layout.getWidth();
+            if(mIsExpand) {
+                // don't support getPaddingTop() and getPaddingBottom()
+                int sumHeight = -mBounds.top + 1 + mBounds.bottom;
+                if(lines > 1) {
+                    sumHeight += (int) (layout.getLineBottom(0) * (Math.ceil(lines) - 1)) + 1;
+                } else {
+                    sumHeight = layout.getLineBottom(0);
+                }
+                setMeasuredDimension(Math.max(getMeasuredWidth(), layout.getWidth()), sumHeight);
+            } else {
+                int sumHeight = -mBounds.top + 1 + mBounds.bottom;
+                if(lines > maxLines && maxLines > 1) {
+                    sumHeight += layout.getLineBottom(0)  * (maxLines - 1) + 1;
+                } else if(maxLines == 1 || lines <= 1){
+                    sumHeight = layout.getLineBottom(0);
+                }
+                setMeasuredDimension(Math.max(getMeasuredWidth(), Math.min(width, dm.widthPixels)), sumHeight);
+            }
+        }
     }
 
     private String calculateTextParams() {
-        final String text = getText().toString();
-        final int textLength = text.length();
+        final String text = TextUtils.isEmpty(getText()) ? "" : getText().toString();
+        String workingText = endPunctuationPattern.matcher(text).replaceFirst("");
+        final int textLength = workingText.length();
         mPaint.setTextSize(getTextSize());
-        mPaint.getTextBounds(text, 0, textLength, mBounds);
+        mPaint.getTextBounds(workingText, 0, textLength, mBounds);
         if (textLength == 0) {
             mBounds.right = mBounds.left;
         }
@@ -156,39 +158,21 @@ public class TopAlignedTextView extends TextView {
     }
 
     // add ELLIPSIS
-    private static final String ELLIPSIS = "\u2026";
-    private static final Pattern DEFAULT_END_PUNCTUATION = Pattern.compile("[\\.,\u2026;\\:\\s]*$", Pattern.DOTALL);
-    private final List<EllipsizeListener> ellipsizeListeners = new ArrayList<EllipsizeListener>();
-    private boolean isEllipsized;
-    private boolean isStale;
-    private boolean programmaticChange;
-    private CharSequence fullText;
+    private static final String ELLIPSIS = "\u2026Mer\u25BC";
+    private static final Pattern DEFAULT_END_PUNCTUATION = Pattern.compile("[\\.,\u2026Mer\u25BC;\\:\\s]*$", Pattern.DOTALL);
     private int maxLines;
 
-    public interface EllipsizeListener {
-      void ellipsizeStateChanged(boolean ellipsized);
+    @Override
+    public void onClick(View v) {
+        mIsExpand = !mIsExpand;
+        requestLayout();
     }
 
-    public void addEllipsizeListener(EllipsizeListener listener) {
-      if (listener == null) {
-        throw new NullPointerException();
-      }
-      ellipsizeListeners.add(listener);
-    }
-
-    public void removeEllipsizeListener(EllipsizeListener listener) {
-      ellipsizeListeners.remove(listener);
-    }
-
-    public boolean isEllipsized() {
-      return isEllipsized;
-    }
 
     @Override
     public void setMaxLines(int maxLines) {
       super.setMaxLines(maxLines);
       this.maxLines = maxLines;
-      isStale = true;
     }
 
     @SuppressLint("Override")
@@ -196,88 +180,10 @@ public class TopAlignedTextView extends TextView {
       return maxLines;
     }
 
-    public boolean ellipsizingLastFullyVisibleLine() {
-      return maxLines == Integer.MAX_VALUE;
-    }
 
-
-    /**
-     * Get how many lines of text we are allowed to display.
-     */
-    private int getLinesCount() {
-        if (ellipsizingLastFullyVisibleLine()) {
-            int fullyVisibleLinesCount = getFullyVisibleLinesCount();
-            if (fullyVisibleLinesCount == -1) {
-                return 1;
-            } else {
-                return fullyVisibleLinesCount;
-            }
-        } else {
-            return maxLines;
-        }
-    }
-
-    /**
-     * Get how many lines of text we can display so their full height is visible.
-     */
-    private int getFullyVisibleLinesCount() {
-      Layout layout = createWorkingLayout("");
-      int height = getHeight() - getPaddingTop() - getPaddingBottom();
-      int lineHeight = layout.getLineBottom(0);
-      return height / lineHeight;
-    }
-
-    private Layout createWorkingLayout(CharSequence workingText) {
+    private Layout createWorkingLayout(int width, CharSequence workingText) {
         return new StaticLayout(workingText, getPaint(),
-                getWidth() - getPaddingLeft() - getPaddingRight(),
+                width,
                 Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
-    }
-
-
-    private void resetText() {
-        CharSequence workingText = fullText;
-        boolean ellipsized = false;
-        Layout layout = createWorkingLayout(workingText);
-        int linesCount = getLinesCount();
-        if (layout.getLineCount() > linesCount) {
-            // We have more lines of text than we are allowed to display.
-            workingText = fullText.subSequence(0, layout.getLineEnd(linesCount - 1));
-            while (createWorkingLayout(workingText + ELLIPSIS).getLineCount() > linesCount) {
-                int lastSpace = workingText.toString().lastIndexOf(' ');
-                if (lastSpace == -1) {
-                    break;
-                }
-                workingText = workingText.subSequence(0, lastSpace);
-            }
-            // We should do this in the loop above, but it's cheaper this way.
-            if (workingText instanceof Spannable) {
-                SpannableStringBuilder builder = new SpannableStringBuilder(workingText);
-                Matcher matcher = endPunctuationPattern.matcher(workingText);
-                if (matcher.find()) {
-                    builder.replace(matcher.start(), workingText.length(), ELLIPSIS);
-                }
-                workingText = builder;
-            } else {
-                workingText = endPunctuationPattern.matcher(workingText).replaceFirst("");
-                workingText = workingText + ELLIPSIS;
-            }
-
-            ellipsized = true;
-        }
-        if (!workingText.equals(getText())) {
-            programmaticChange = true;
-            try {
-                setText(workingText);
-            } finally {
-                programmaticChange = false;
-            }
-        }
-        isStale = false;
-        if (ellipsized != isEllipsized) {
-            isEllipsized = ellipsized;
-            for (EllipsizeListener listener : ellipsizeListeners) {
-                listener.ellipsizeStateChanged(ellipsized);
-            }
-        }
     }
 }
