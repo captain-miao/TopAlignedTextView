@@ -62,12 +62,9 @@ public class TopAlignedTextView extends TextView implements View.OnClickListener
         init(context, attrs);
         super.setEllipsize(null);
         TypedArray a = context.obtainStyledAttributes(attrs, new int[] { android.R.attr.maxLines });
-        setMaxLines(a.getInt(0, -1));
+        setMaxLines(a.getInt(0, Integer.MAX_VALUE));
         a.recycle();
         setEndPunctuationPattern(DEFAULT_END_PUNCTUATION);
-        if(maxLines <= 0){
-            throw new IllegalStateException("maxLines must >= 1");
-        }
     }
 
     private void init(Context context, AttributeSet attrs) {
@@ -132,7 +129,7 @@ public class TopAlignedTextView extends TextView implements View.OnClickListener
                 } else {
                     sumHeight = layout.getLineBottom(0);
                 }
-                setMeasuredDimension(Math.max(getMeasuredWidth(), layout.getWidth()), sumHeight);
+                setMeasuredDimension(Math.min(getMeasuredWidth(), layout.getWidth()), sumHeight);
             } else {
                 int sumHeight = -mBounds.top + 1 + mBounds.bottom;
                 if(lines > maxLines && maxLines > 1) {
@@ -140,7 +137,7 @@ public class TopAlignedTextView extends TextView implements View.OnClickListener
                 } else if(maxLines == 1 || lines <= 1){
                     sumHeight = layout.getLineBottom(0);
                 }
-                setMeasuredDimension(Math.max(getMeasuredWidth(), Math.min(width, dm.widthPixels)), sumHeight);
+                setMeasuredDimension(Math.min(getMeasuredWidth(), Math.min(width, dm.widthPixels)), sumHeight);
             }
         }
     }
